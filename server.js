@@ -14,15 +14,58 @@ connectDB();
 // Express-App initialisieren
 const app = express();
 
-// CORS-Konfiguration
+// CORS-Konfiguration - Updated for production
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174', 
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+  'https://gutachterportal-neu-frontend.vercel.app',
+  process.env.FRONTEND_URL,
+  process.env.CLIENT_URL,
+  'https://gutachter.rechtly.de' // Your custom domain
+].filter(Boolean); // Remove undefined values
+
+console.log('🌐 Allowed CORS Origins:', allowedOrigins);
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173', 'http://127.0.0.1:5174'],
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log('✅ CORS: Allowed origin:', origin);
+      callback(null, true);
+    } else {
+      console.log('❌ CORS: Blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Origin',
+    'X-Requested-With',
+    'Content-Type',
+    'Accept',
+    'Authorization',
+    'Cache-Control'
+  ],
+  optionsSuccessStatus: 200
 }));
+
+// Handle preflight requests
+app.options('*', cors());
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Add request logging for debugging
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin}`);
+  next();
+});
 
 // API-Routen
 const userRoutes = require('./api/routes/users');
@@ -46,6 +89,16 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.resolve(__dirname, '../frontend/build', 'index.html'));
   });
 }
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV,
+    allowedOrigins: allowedOrigins
+  });
+});
 
 // MinIO-Check beim Start
 console.log('🔄 Versuche Verbindung zu MinIO herzustellen...');
@@ -163,4 +216,8 @@ checkMinioConnection().catch(error => {
 const PORT = process.env.PORT || 5000;
 
 // Server starten
-app.listen(PORT, () => console.log(`🚀 Server läuft auf Port ${PORT}`)); 
+app.listen(PORT, () => {
+  console.log(`🚀 Server läuft auf Port ${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+  console.log(`🌐 Allowed Origins:`, allowedOrigins);
+});
