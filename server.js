@@ -21,9 +21,10 @@ const allowedOrigins = [
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
   'https://gutachterportal-neu-frontend.vercel.app',
+  'https://gutachter.rechtly.de',
+  'https://www.gutachter.rechtly.de',
   process.env.FRONTEND_URL,
-  process.env.CLIENT_URL,
-  'https://gutachter.rechtly.de' // Your custom domain
+  process.env.CLIENT_URL
 ].filter(Boolean); // Remove undefined values
 
 console.log('🌐 Allowed CORS Origins:', allowedOrigins);
